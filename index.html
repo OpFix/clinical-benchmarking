@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Practice benchmark</title>
+<meta name="description" content="Set and amend the lab ranges MedLabIQ applies for your practice.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F3F6F7;
+  --panel: #FFFFFF;
+  --ink: #14212B;
+  --muted: #5B6B77;
+  --rule: #D5DDE2;
+  --soft: #E9EEF1;
+  --accent: #0F6E7A;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #DCEEF0;
+  --lab: #B7C3CB;
+  --warn: #9A4A06;
+  --warn-soft: #FBEEDD;
+  --bad: #A61B2B;
+  --focus: #1C8FA0;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F171D; --panel: #16212A; --ink: #E4ECF0; --muted: #93A4AF; --rule: #2A3843;
+    --soft: #1C2A34; --accent: #4FB3BF; --accent-ink: #0F171D; --accent-soft: #173A40;
+    --lab: #4A5B66; --warn: #F0A85A; --warn-soft: #3A2A18; --bad: #F07A86; --focus: #6CCFDB;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F171D; --panel: #16212A; --ink: #E4ECF0; --muted: #93A4AF; --rule: #2A3843;
+  --soft: #1C2A34; --accent: #4FB3BF; --accent-ink: #0F171D; --accent-soft: #173A40;
+  --lab: #4A5B66; --warn: #F0A85A; --warn-soft: #3A2A18; --bad: #F07A86; --focus: #6CCFDB;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.5 "IBM Plex Sans", system-ui, sans-serif; font-variant-numeric: tabular-nums;
+}
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
+
+header.top { border-bottom: 1px solid var(--rule); background: var(--panel); }
+header.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 14px; padding-bottom: 14px; flex-wrap: wrap; }
+.brand { font-weight: 600; letter-spacing: -0.01em; }
+.brand span { color: var(--muted); font-weight: 400; }
+.mode { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.mode .pill { font-size: 13px; padding: 3px 10px; border-radius: 999px; background: var(--soft); color: var(--muted); }
+.mode .pill.amend { background: var(--accent-soft); color: var(--accent); }
+
+.layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 32px; padding-top: 28px; padding-bottom: 80px; }
+nav.steps { position: sticky; top: 16px; align-self: start; }
+nav.steps ol { list-style: none; margin: 0; padding: 0; border-left: 2px solid var(--rule); }
+nav.steps li button {
+  display: block; width: 100%; text-align: left; background: none; border: 0; cursor: pointer;
+  padding: 10px 14px; margin-left: -2px; border-left: 2px solid transparent; color: var(--muted);
+}
+nav.steps li button .l { display: inline-block; width: 1.4em; font-weight: 600; }
+nav.steps li button[aria-current="step"] { color: var(--ink); border-left-color: var(--accent); font-weight: 500; }
+nav.steps li button .n { display: block; font-size: 12.5px; padding-left: 1.4em; color: var(--muted); font-weight: 400; }
+nav.steps .side { margin-top: 20px; font-size: 13px; color: var(--muted); }
+
+h1 { font-size: 28px; line-height: 1.2; font-weight: 600; letter-spacing: -0.015em; margin: 0 0 6px; }
+h2 { font-size: 19px; font-weight: 600; margin: 0 0 4px; }
+.lede { color: var(--muted); margin: 0 0 24px; max-width: 68ch; }
+section.step[hidden] { display: none; }
+main { min-width: 0; }
+.labref { overflow-wrap: anywhere; }
+
+.card { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+.field { display: grid; grid-template-columns: 220px 1fr; gap: 12px; padding: 12px 0; border-top: 1px solid var(--soft); align-items: start; }
+.field:first-of-type { border-top: 0; }
+.field > .lbl { font-weight: 500; padding-top: 6px; }
+.field > .lbl small { display: block; font-weight: 400; color: var(--muted); font-size: 13px; }
+select, input[type="number"], input[type="date"] {
+  background: var(--panel); border: 1px solid var(--rule); border-radius: 5px; padding: 6px 8px; min-height: 36px;
+}
+input[type="number"] { width: 100%; min-width: 0; }
+select:disabled, input:disabled { background: var(--soft); color: var(--muted); }
+.checks { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.checks label, label.chk { display: inline-flex; gap: 8px; align-items: center; cursor: pointer; padding: 4px 0; }
+input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--accent); margin: 0; }
+
+.btn { border: 1px solid var(--rule); background: var(--panel); border-radius: 6px; padding: 8px 14px; cursor: pointer; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 500; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.row-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: space-between; margin-top: 8px; }
+
+.toolbar { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+.toolbar input[type="search"] { flex: 1 1 220px; border: 1px solid var(--rule); border-radius: 5px; padding: 7px 10px; background: var(--panel); min-height: 36px; }
+.count { color: var(--muted); font-size: 13.5px; }
+
+.group { margin-bottom: 18px; }
+.group > .gh { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--rule); }
+.group > .gh h3 { margin: 0; font-size: 15px; font-weight: 600; }
+.mlist { columns: 3 220px; column-gap: 24px; padding-top: 8px; }
+.mlist label { display: flex; break-inside: avoid; gap: 8px; align-items: flex-start; padding: 3px 0; cursor: pointer; }
+.mlist label input { margin-top: 3px; }
+.mlist .has { color: var(--muted); font-size: 12px; margin-left: 4px; }
+
+details.marker { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; margin-bottom: 8px; }
+details.marker > summary { list-style: none; cursor: pointer; padding: 12px 16px; display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+details.marker > summary::-webkit-details-marker { display: none; }
+details.marker > summary::before { content: "+"; color: var(--muted); width: 1em; }
+details.marker[open] > summary::before { content: "\2212"; }
+details.marker > summary .nm { font-weight: 600; }
+details.marker > summary .meta { color: var(--muted); font-size: 13px; }
+details.marker > summary .tag { margin-left: auto; font-size: 12.5px; padding: 1px 8px; border-radius: 999px; background: var(--soft); color: var(--muted); }
+details.marker > summary .tag.custom { background: var(--accent-soft); color: var(--accent); }
+details.marker > summary .tag.warn { background: var(--warn-soft); color: var(--warn); }
+.mbody { padding: 0 16px 16px; }
+
+.labref { border-left: 3px solid var(--lab); padding: 6px 12px; margin: 0 0 12px; font-size: 13.5px; color: var(--muted); }
+.labref b { color: var(--ink); font-weight: 500; }
+.labref ul { margin: 4px 0 0; padding-left: 18px; }
+
+.msg { font-size: 13px; color: var(--bad); margin-top: 6px; }
+.msg.warn { color: var(--warn); }
+
+.rows { width: 100%; border-collapse: collapse; }
+.rows th { text-align: left; font-weight: 500; font-size: 12.5px; color: var(--muted); padding: 6px 8px 6px 0; border-bottom: 1px solid var(--rule); }
+.rows td { padding: 8px 8px 8px 0; border-bottom: 1px solid var(--soft); vertical-align: top; }
+.rows td.grp { font-weight: 500; min-width: 150px; }
+.rows td.num { width: 120px; }
+.rows td.unit { width: 130px; }
+.rows td.src { font-size: 12.5px; color: var(--muted); min-width: 200px; }
+.rows input[type="number"] { width: 110px; }
+.rows .sep { color: var(--muted); padding: 8px 6px 0 0; width: 1em; }
+.rows tr.changed td.grp::after { content: "amended"; display: block; font-size: 11.5px; color: var(--accent); font-weight: 400; }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; font-size: 12.5px; text-decoration: underline; }
+
+.review dl { display: grid; grid-template-columns: 220px 1fr; gap: 8px 16px; margin: 0; }
+.review dt { color: var(--muted); }
+.review dd { margin: 0; }
+.issues { margin: 0; padding-left: 18px; }
+.issues li { margin: 4px 0; }
+.ok { color: var(--accent); }
+.empty { color: var(--muted); padding: 24px; text-align: center; border: 1px dashed var(--rule); border-radius: 8px; }
+.notice { background: var(--warn-soft); color: var(--warn); border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (max-width: 860px) {
+  .layout { grid-template-columns: minmax(0, 1fr); gap: 16px; padding-top: 16px; }
+  nav.steps { position: static; }
+  nav.steps ol { display: flex; border-left: 0; border-bottom: 2px solid var(--rule); overflow-x: auto; }
+  nav.steps li button { border-left: 0; border-bottom: 2px solid transparent; margin: 0 0 -2px; white-space: nowrap; }
+  nav.steps li button[aria-current="step"] { border-bottom-color: var(--accent); }
+  nav.steps li button .n, nav.steps .side { display: none; }
+  .field { grid-template-columns: 1fr; gap: 6px; }
+  .field > .lbl { padding-top: 0; }
+  .rows thead { display: none; }
+  .rows tr { display: grid; grid-template-columns: 1fr auto 1fr; gap: 6px 8px; padding: 10px 0; border-bottom: 1px solid var(--soft); }
+  .rows td { border: 0; padding: 0; }
+  .rows td.grp, .rows td.unit, .rows td.src, .rows td.why { grid-column: 1 / -1; }
+  .rows input[type="number"] { width: 100%; }
+  .review dl { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+.labref summary { cursor: pointer; color: var(--ink); }
+.was { font-size: 12px; color: var(--muted); font-weight: 400; }
+.conv { font-size: 12px; color: var(--muted); }
+</style></head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">MedLabIQ <span>Practice benchmark</span></div>
+    <div class="mode">
+      <span class="pill" id="modePill">New benchmark</span>
+      <label class="btn" for="loadFile">Open a saved benchmark</label>
+      <input type="file" id="loadFile" accept="application/json,.json" class="visually-hidden">
+    </div>
+  </div>
+</header>
+
+<div class="wrap layout">
+  <nav class="steps" aria-label="Benchmark sections">
+    <ol>
+      <li><button data-step="a" aria-current="step"><span class="l">A</span>Practice profile<span class="n" id="navA"></span></button></li>
+      <li><button data-step="b"><span class="l">B</span>Markers you order<span class="n" id="navB"></span></button></li>
+      <li><button data-step="c"><span class="l">C</span>Ranges<span class="n" id="navC"></span></button></li>
+      <li><button data-step="r"><span class="l">&#10003;</span>Review and save<span class="n" id="navR"></span></button></li>
+    </ol>
+    <p class="side">Defaults come from Quest's and Labcorp's published test directories and printed reports.</p>
+  </nav>
+
+  <main>
+    <div id="loadError" class="notice" hidden></div>
+
+    <section class="step" id="step-a">
+      <h1>Practice profile</h1>
+      <p class="lede">These answers decide which lab's ranges fill in the form and which patient groups get their own row.</p>
+      <div class="card" id="profileCard"></div>
+      <div class="row-actions"><span></span><button class="btn primary" data-go="b">Choose markers</button></div>
+    </section>
+
+    <section class="step" id="step-b" hidden>
+      <h1>Markers you order</h1>
+      <p class="lede">Check every marker your practice orders or scores. Anything left unchecked is skipped.</p>
+      <div class="toolbar">
+        <input type="search" id="bFilter" placeholder="Filter markers by name" aria-label="Filter markers by name">
+        <span class="count" id="bCount"></span>
+      </div>
+      <div id="bGroups"></div>
+      <div class="row-actions"><button class="btn" data-go="a">Back</button><button class="btn primary" data-go="c">Set ranges</button></div>
+    </section>
+
+    <section class="step" id="step-c" hidden>
+      <h1>Ranges</h1>
+      <p class="lede">Every row opens on its lab default. Change a low or a high to set your own. A high can't go below its low, and a low can't go above its high. Leave either blank to keep that side open.</p>
+      <div class="toolbar">
+        <input type="search" id="cFilter" placeholder="Filter by marker" aria-label="Filter by marker">
+        <label class="chk"><input type="checkbox" id="cOnlyCustom"> Show only markers you've changed</label>
+        <span class="count" id="cCount"></span>
+      </div>
+      <div id="cList"></div>
+      <div class="row-actions"><button class="btn" data-go="b">Back</button><button class="btn primary" data-go="r">Review</button></div>
+    </section>
+
+    <section class="step" id="step-r" hidden>
+      <h1>Review and save</h1>
+      <p class="lede">Saving downloads this benchmark as a versioned file. Open it here later to amend single markers; every earlier version stays inside the file. Nothing you enter leaves your computer.</p>
+      <div class="card review" id="reviewCard"></div>
+      <div class="row-actions"><button class="btn" data-go="c">Back</button><button class="btn primary" id="saveBtn">Save benchmark</button></div>
+    </section>
+  </main>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const PRACTICE_TYPES = ["HRT", "TRT", "Functional medicine", "Peptide therapy", "Longevity", "Mixed"];
+  const LABS = ["Quest", "Labcorp", "Both", "Other"];
+  const GROUPS = [
+    {id: "men", label: "Adult men", basis: "M"},
+    {id: "women", label: "Adult women", basis: "F"},
+    {id: "postmeno", label: "Postmenopausal women", basis: "F_post"},
+    {id: "men_trt", label: "Men on TRT", basis: "M"},
+    {id: "women_hrt", label: "Women on HRT", basis: "F_post"},
+    {id: "men_thyroid", label: "Men on thyroid therapy", basis: "M"},
+    {id: "women_thyroid", label: "Women on thyroid therapy", basis: "F"},
+    {id: "men_athletes", label: "Male athletes", basis: "M"},
+    {id: "women_athletes", label: "Female athletes", basis: "F"}
+  ];
+  const BASIS = {M: "adult male", F: "adult female", F_post: "postmenopausal female"};
+  const REASONS = ["New guideline", "Lab change", "Assay change", "Practice protocol change", "Correction"];
+  const CAT_LABEL = {"biomarker": "Lab markers", "calculated ratio/index": "Calculated ratios and indexes",
+    "vital/anthropometric": "Vitals and body measures", "questionnaire/instrument": "Questionnaires and instruments",
+    "imaging/test": "Imaging and tests"};
+  const ROLE_LABEL = r => r.replace(/_/g, " ").replace(/^./, c => c.toUpperCase());
+  const SCHEMA = "medlabiq-benchmark/2";
+  const DRAFT_KEY = "medlabiq-benchmark-draft-2";
+
+  let DATA = null, BY = {};
+  let S = blankState();
+  let BASE = null;
+
+  function blankState() {
+    return {schema: SCHEMA, version: 0, effective_date: "", approving_role: "",
+      profile: {practice_type: "", primary_lab: "", groups: []},
+      markers: {}, amendments: [], previous_versions: [], version_reason: "", row_reasons: {}};
+  }
+  const $ = (s, r = document) => r.querySelector(s);
+  const h = (tag, attrs = {}, kids = []) => {
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === "class") e.className = v; else if (k === "text") e.textContent = v;
+      else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+      else if (v === true) e.setAttribute(k, ""); else if (v !== false && v != null) e.setAttribute(k, v);
+    }
+    for (const c of [].concat(kids)) if (c != null) e.append(c.nodeType ? c : document.createTextNode(c));
+    return e;
+  };
+  const select = (opts, val, attrs = {}, blank = "Choose") => {
+    const s = h("select", attrs);
+    if (blank !== null) s.append(h("option", {value: "", text: blank}));
+    for (const o of opts) { const [v, t] = Array.isArray(o) ? o : [o, o]; s.append(h("option", {value: v, text: t, selected: v === val})); }
+    return s;
+  };
+  const clone = o => JSON.parse(JSON.stringify(o));
+  const num = v => (v === "" || v == null || isNaN(+v)) ? null : +v;
+  const fmt = v => v == null ? "" : String(Math.round(v * 10000) / 10000);
+  const today = () => new Date().toISOString().slice(0, 10);
+  const group = id => GROUPS.find(g => g.id === id);
+
+  function saveDraft() { try { localStorage.setItem(DRAFT_KEY, JSON.stringify({S, BASE})); } catch (e) {} }
+  function loadDraft() { try { const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null"); if (d && d.S && d.S.schema === SCHEMA) { S = d.S; BASE = d.BASE; } } catch (e) {} }
+
+  // ---- defaults: the practice's primary lab first, the other lab where it has none
+  function labOrder() { return S.profile.primary_lab === "Labcorp" ? ["Labcorp", "Quest"] : ["Quest", "Labcorp"]; }
+  function defaultFor(m, gid) {
+    const b = group(gid).basis, d = BY[m].defaults || {}, order = labOrder();
+    for (const lab of order) if (d[lab] && d[lab][b]) {
+      const x = d[lab][b];
+      const primary = S.profile.primary_lab === lab || !["Quest", "Labcorp"].includes(S.profile.primary_lab);
+      return Object.assign({lab, fallback: !primary && order[0] !== lab ? true : !primary}, x);
+    }
+    return null;
+  }
+  function unitsFor(m) {
+    const u = [];
+    const add = x => { if (x && x.length < 16 && !u.includes(x) && !/not (printed|stated)|none/i.test(x)) u.push(x); };
+    (BY[m].units || []).forEach(add);
+    for (const lab of Object.values(BY[m].defaults || {})) for (const x of Object.values(lab)) add(x.unit);
+    for (const r of BY[m].lab) (r.units || "").split(/\s*[|;]\s*/).forEach(add);
+    return u.length ? u : ["score or unitless"];
+  }
+  function fromDefault(m, gid) {
+    const d = defaultFor(m, gid), units = unitsFor(m);
+    return {low: d ? d.low : null, high: d ? d.high : null, unit: d && units.includes(d.unit) ? d.unit : units[0], custom: false};
+  }
+  function ensureRows(m) {
+    const mk = S.markers[m] || (S.markers[m] = {ordered: false, rows: {}});
+    for (const g of S.profile.groups) if (!mk.rows[g]) mk.rows[g] = fromDefault(m, g);
+    return mk;
+  }
+  function refreshDefaults() {
+    // a row nobody has touched follows the defaults when the primary lab changes
+    for (const [m, mk] of Object.entries(S.markers)) for (const [g, r] of Object.entries(mk.rows)) if (!r.custom) mk.rows[g] = fromDefault(m, g);
+  }
+  const rowKey = (m, g) => m + "\u0001" + g;
+  const same = (a, b) => a && b && a.low === b.low && a.high === b.high && a.unit === b.unit;
+  function changed(m, g) {
+    if (!BASE) return false;
+    const b = BASE.markers[m] && BASE.markers[m].rows && BASE.markers[m].rows[g];
+    const c = S.markers[m] && S.markers[m].rows[g];
+    if (!b) return !!(c && S.markers[m].ordered);
+    return !same(b, c);
+  }
+  function orderedList() { return DATA.markers.filter(m => S.markers[m.name] && S.markers[m.name].ordered); }
+  function customCount(m) { const mk = S.markers[m]; return mk ? S.profile.groups.filter(g => mk.rows[g] && mk.rows[g].custom).length : 0; }
+  function openRows() {
+    const out = [];
+    for (const m of orderedList()) for (const g of S.profile.groups) { const r = ensureRows(m.name).rows[g]; if (r.low == null && r.high == null) out.push([m.name, g]); }
+    return out;
+  }
+
+  // ---- section A
+  function renderA() {
+    const c = $("#profileCard"); c.textContent = "";
+    const P = S.profile;
+    const f = (label, hint, ctrl) => h("div", {class: "field"}, [h("div", {class: "lbl"}, [label, hint ? h("small", {text: hint}) : null]), h("div", {}, ctrl)]);
+    c.append(
+      f("Practice type", null, select(PRACTICE_TYPES, P.practice_type, {onchange: e => { P.practice_type = e.target.value; change(); }, "aria-label": "Practice type"})),
+      f("Primary lab", "Its ranges fill in section C. Where it has none, the other lab's fill in and say so.", select(LABS, P.primary_lab, {onchange: e => { P.primary_lab = e.target.value; refreshDefaults(); change(); }, "aria-label": "Primary lab"})),
+      f("Patient groups you serve", "Each checked group gets its own row per marker.", h("div", {class: "checks"}, GROUPS.map(g =>
+        h("label", {}, [h("input", {type: "checkbox", checked: P.groups.includes(g.id), onchange: e => {
+          P.groups = GROUPS.map(x => x.id).filter(id => id === g.id ? e.target.checked : P.groups.includes(id)); change(); }}), g.label])))),
+      f("Approving role", "The role that signs this version.", select(DATA.roles.filter(r => /clinical|safety/.test(r)).map(r => [r, ROLE_LABEL(r)]), S.approving_role, {onchange: e => { S.approving_role = e.target.value; change(); }, "aria-label": "Approving role"})),
+      f("Effective date", null, h("input", {type: "date", value: S.effective_date, onchange: e => { S.effective_date = e.target.value; change(); }, "aria-label": "Effective date"}))
+    );
+  }
+
+  // ---- section B
+  function renderB() {
+    const box = $("#bGroups"); box.textContent = "";
+    const q = $("#bFilter").value.trim().toLowerCase();
+    for (const cat of DATA.categories) {
+      const ms = DATA.markers.filter(m => m.category === cat && (!q || m.name.toLowerCase().includes(q)));
+      if (!ms.length) continue;
+      const all = ms.every(m => S.markers[m.name] && S.markers[m.name].ordered);
+      box.append(h("div", {class: "group"}, [
+        h("div", {class: "gh"}, [h("h3", {text: `${CAT_LABEL[cat]} (${ms.length})`}),
+          h("label", {class: "chk"}, [h("input", {type: "checkbox", checked: all, onchange: e => { for (const m of ms) ensureRows(m.name).ordered = e.target.checked; change(); renderB(); }}), "Check all shown"])]),
+        h("div", {class: "mlist"}, ms.map(m => h("label", {}, [
+          h("input", {type: "checkbox", checked: !!(S.markers[m.name] && S.markers[m.name].ordered), onchange: e => { ensureRows(m.name).ordered = e.target.checked; change(); }}),
+          h("span", {}, [m.name, Object.keys(m.defaults || {}).length ? null : h("span", {class: "has", text: "no default"})])])))]));
+    }
+    if (!box.children.length) box.append(h("p", {class: "empty", text: "No marker matches that filter."}));
+    $("#bCount").textContent = `${orderedList().length} of ${DATA.markers.length} checked`;
+  }
+
+  // ---- section C
+  function renderC() {
+    const list = $("#cList"); list.textContent = "";
+    if (!S.profile.groups.length) { list.append(h("p", {class: "empty", text: "Check at least one patient group in the practice profile to set ranges."})); return; }
+    if (!orderedList().length) { list.append(h("p", {class: "empty", text: "Check the markers you order in section B, and they'll show here."})); return; }
+    const q = $("#cFilter").value.trim().toLowerCase(), only = $("#cOnlyCustom").checked;
+    const ms = orderedList().filter(m => (!q || m.name.toLowerCase().includes(q)) && (!only || customCount(m.name) || S.profile.groups.some(g => changed(m.name, g))));
+    $("#cCount").textContent = `${ms.length} markers`;
+    for (const m of ms) list.append(markerCard(m));
+  }
+  function summarize(m, d) {
+    ensureRows(m.name);
+    const s = d.querySelector("summary"); s.textContent = "";
+    const n = customCount(m.name), amended = S.profile.groups.filter(g => changed(m.name, g)).length;
+    const none = S.profile.groups.every(g => !defaultFor(m.name, g));
+    s.append(h("span", {class: "nm", text: m.name}), h("span", {class: "meta", text: CAT_LABEL[m.category]}),
+      h("span", {class: "tag" + (n ? " custom" : ""), text: n ? `${n} set by practice` : none ? "No default, open" : "Defaults"}));
+    if (amended) s.append(h("span", {class: "tag custom", style: "margin-left:0", text: `${amended} amended`}));
+  }
+  function markerCard(m) {
+    const d = h("details", {class: "marker"}, [h("summary")]);
+    summarize(m, d);
+    d.addEventListener("toggle", () => { if (d.open && !d.querySelector(".mbody")) d.append(markerBody(m, d)); });
+    return d;
+  }
+  function labOnFile(m) {
+    const rows = m.lab.filter(r => r.range_as_printed);
+    if (!rows.length) return null;
+    const ul = h("ul");
+    for (const r of rows.slice(0, 12)) ul.append(h("li", {}, [`${r.vendor}${r.test_code ? " test " + r.test_code : ""}: `, h("b", {text: r.range_as_printed.length > 240 ? r.range_as_printed.slice(0, 240) + "..." : r.range_as_printed}), r.units ? ` ${r.units}` : "", r.loinc ? ` (LOINC ${r.loinc})` : ""]));
+    if (rows.length > 12) ul.append(h("li", {text: `${rows.length - 12} more on file`}));
+    return h("details", {class: "labref"}, [h("summary", {text: `Lab ranges on file (${rows.length})`}), ul]);
+  }
+  function markerBody(m, card) {
+    const tbody = h("tbody");
+    const table = h("table", {class: "rows"}, [h("thead", {}, h("tr", {}, [h("th", {text: "Group"}), h("th", {text: "Low"}), h("th"), h("th", {text: "High"}), h("th", {text: "Unit"}), h("th", {text: "Default"})])), tbody]);
+    for (const g of S.profile.groups) tbody.append(rowEl(m, g, card));
+    return h("div", {class: "mbody"}, [table, labOnFile(m)]);
+  }
+  function rowEl(m, gid, card) {
+    const mk = ensureRows(m.name), r = mk.rows[gid], g = group(gid);
+    const tr = h("tr");
+    const prev = BASE && BASE.markers[m.name] && BASE.markers[m.name].rows && BASE.markers[m.name].rows[gid];
+    const draw = () => {
+      tr.textContent = ""; tr.classList.toggle("changed", changed(m.name, gid));
+      const msg = h("div", {class: "msg", role: "status"});
+      const inp = (side) => {
+        const other = side === "low" ? "high" : "low";
+        const i = h("input", {type: "number", step: "any", inputmode: "decimal", value: fmt(r[side]), "aria-label": `${side === "low" ? "Low" : "High"}, ${m.name}, ${g.label}`});
+        if (side === "low" && r.high != null) i.max = r.high;
+        if (side === "high" && r.low != null) i.min = r.low;
+        i.addEventListener("change", () => {
+          const v = num(i.value), o = r[other];
+          if (v != null && o != null && (side === "low" ? v > o : v < o)) {
+            i.value = fmt(r[side]);
+            msg.textContent = side === "low" ? `A low can't sit above its high (${fmt(o)}).` : `A high can't sit below its low (${fmt(o)}).`;
+            return;
+          }
+          r[side] = v; r.custom = true; afterEdit();
+        });
+        return i;
+      };
+      const d = defaultFor(m.name, gid);
+      const was = prev && !same(prev, r) ? h("div", {class: "was", text: `was ${prev.low == null ? "open" : fmt(prev.low)} to ${prev.high == null ? "open" : fmt(prev.high)} ${prev.unit}`}) : null;
+      const reason = changed(m.name, gid) ? select(REASONS, S.row_reasons[rowKey(m.name, gid)] || "", {style: "margin-top:6px", onchange: e => { S.row_reasons[rowKey(m.name, gid)] = e.target.value; change(false); }, "aria-label": `Reason for change, ${m.name}, ${g.label}`}, "Reason for change") : null;
+      const src = d ? [`${d.lab} ${d.low == null ? "open" : fmt(d.low)} to ${d.high == null ? "open" : fmt(d.high)} ${d.unit}`, h("br"), h("span", {text: d.how + (d.fallback ? `. No ${S.profile.primary_lab} default, so ${d.lab}'s is used` : "")})] : ["No lab publishes a default. Both sides start open."];
+      const reset = r.custom ? h("button", {class: "linkbtn", onclick: () => { Object.assign(r, fromDefault(m.name, gid)); afterEdit(); }, text: "Reset to default"}) : null;
+      tr.append(
+        h("td", {class: "grp"}, [g.label, ["men", "women", "postmeno"].includes(gid) ? null : h("div", {class: "was", text: `Uses ${BASIS[g.basis]} defaults`}), was, reason]),
+        h("td", {class: "num"}, inp("low")), h("td", {class: "sep", text: "to"}), h("td", {class: "num"}, inp("high")),
+        h("td", {class: "unit"}, select(unitsFor(m.name), r.unit, {onchange: e => { r.unit = e.target.value; r.custom = true; afterEdit(); }, "aria-label": `Unit, ${m.name}, ${g.label}`}, null)),
+        h("td", {class: "src"}, [...src, reset ? h("br") : null, reset, msg, conv(m, r)]));
+    };
+    const afterEdit = () => { change(false); draw(); summarize(m, card); };
+    draw();
+    return tr;
+  }
+  function conv(m, r) {
+    const c = (BY[m.name].conversions || []).find(x => x.from === r.unit);
+    if (!c || (r.low == null && r.high == null)) return null;
+    return h("div", {class: "conv", text: `= ${r.low == null ? "open" : fmt(r.low * c.factor)} to ${r.high == null ? "open" : fmt(r.high * c.factor)} ${c.to}`});
+  }
+
+  // ---- review
+  function problems() {
+    const out = [], P = S.profile;
+    if (!P.practice_type) out.push(["a", "Choose a practice type."]);
+    if (!P.primary_lab) out.push(["a", "Choose a primary lab."]);
+    if (!P.groups.length) out.push(["a", "Check at least one patient group."]);
+    if (!S.approving_role) out.push(["a", "Choose the approving role."]);
+    if (!S.effective_date) out.push(["a", "Set an effective date."]);
+    if (!orderedList().length) out.push(["b", "Check at least one marker you order."]);
+    for (const m of orderedList()) for (const g of P.groups) {
+      const r = ensureRows(m.name).rows[g];
+      if (r.low != null && r.high != null && r.low > r.high) out.push(["c", `${m.name}, ${group(g).label}: the low sits above the high.`]);
+      if (changed(m.name, g) && !S.row_reasons[rowKey(m.name, g)]) out.push(["c", `${m.name}, ${group(g).label}: choose a reason for the change.`]);
+    }
+    if (BASE && otherChanges().length && !S.version_reason) out.push(["r", "Choose a reason for the profile and marker changes."]);
+    return out;
+  }
+  function otherChanges() {
+    if (!BASE) return [];
+    const out = [];
+    if (JSON.stringify(BASE.profile) !== JSON.stringify(S.profile)) out.push("practice profile");
+    const was = new Set(Object.keys(BASE.markers).filter(k => BASE.markers[k].ordered)), now = new Set(orderedList().map(m => m.name));
+    const add = [...now].filter(x => !was.has(x)).length, drop = [...was].filter(x => !now.has(x)).length;
+    if (add) out.push(`${add} markers added`); if (drop) out.push(`${drop} markers removed`);
+    return out;
+  }
+  function renderR() {
+    const c = $("#reviewCard"); c.textContent = "";
+    const P = S.profile, ms = orderedList();
+    const rows = ms.flatMap(m => P.groups.map(g => [m.name, g]));
+    const custom = rows.filter(([m, g]) => S.markers[m].rows[g].custom).length;
+    const open = openRows();
+    c.append(h("dl", {}, [
+      h("dt", {text: "Version"}), h("dd", {text: String(S.version + 1) + (BASE ? `, amending version ${BASE.version}` : "")}),
+      h("dt", {text: "Practice type"}), h("dd", {text: P.practice_type || "Not chosen"}),
+      h("dt", {text: "Primary lab"}), h("dd", {text: P.primary_lab || "Not chosen"}),
+      h("dt", {text: "Patient groups"}), h("dd", {text: P.groups.map(g => group(g).label).join(", ") || "None"}),
+      h("dt", {text: "Markers ordered"}), h("dd", {text: String(ms.length)}),
+      h("dt", {text: "Rows on their default"}), h("dd", {text: `${rows.length - custom} of ${rows.length}`}),
+      h("dt", {text: "Rows set by the practice"}), h("dd", {text: String(custom)}),
+      h("dt", {text: "Rows open on both sides"}), h("dd", {text: open.length ? `${open.length}: ${[...new Set(open.map(x => x[0]))].slice(0, 12).join(", ")}${new Set(open.map(x => x[0])).size > 12 ? " and more" : ""}` : "None"}),
+      h("dt", {text: "Approving role"}), h("dd", {text: S.approving_role ? ROLE_LABEL(S.approving_role) : "Not chosen"}),
+      h("dt", {text: "Effective date"}), h("dd", {text: S.effective_date || "Not set"})
+    ]));
+    const oc = otherChanges();
+    if (oc.length) c.append(h("div", {class: "field"}, [h("div", {class: "lbl"}, ["Reason for other changes", h("small", {text: oc.join(", ")})]),
+      h("div", {}, select(REASONS, S.version_reason, {onchange: e => { S.version_reason = e.target.value; change(); }, "aria-label": "Reason for other changes"}))]));
+    const pr = problems();
+    c.append(h("h2", {style: "margin-top:20px", text: pr.length ? `${pr.length} thing${pr.length > 1 ? "s" : ""} to fix before saving` : "Ready to save"}));
+    if (pr.length) c.append(h("ul", {class: "issues"}, pr.slice(0, 40).map(([s, t]) => h("li", {}, [t, " ", h("button", {class: "btn", style: "padding:2px 8px;font-size:12.5px", onclick: () => go(s), text: "Go to section " + (s === "r" ? "review" : s.toUpperCase())})]))));
+    else c.append(h("p", {class: "ok", text: "Every required answer is in and no range crosses itself."}));
+    $("#saveBtn").disabled = pr.length > 0;
+  }
+
+  function save() {
+    if (problems().length) return renderR();
+    const v = S.version + 1;
+    const out = {schema: SCHEMA, version: v, effective_date: S.effective_date, approving_role: S.approving_role, saved_on: today(),
+      profile: clone(S.profile), markers: {}, amendments: clone(S.amendments), previous_versions: clone(S.previous_versions)};
+    for (const m of orderedList()) {
+      out.markers[m.name] = {ordered: true, rows: {}};
+      for (const g of S.profile.groups) {
+        const r = S.markers[m.name].rows[g], d = defaultFor(m.name, g);
+        out.markers[m.name].rows[g] = {low: r.low, high: r.high, unit: r.unit, custom: r.custom,
+          default: d ? {lab: d.lab, low: d.low, high: d.high, unit: d.unit, how: d.how, source: d.source} : null};
+      }
+    }
+    if (BASE) {
+      out.previous_versions.push(stripHistory(BASE));
+      for (const m of orderedList()) for (const g of S.profile.groups) if (changed(m.name, g)) {
+        const b = BASE.markers[m.name] && BASE.markers[m.name].rows ? BASE.markers[m.name].rows[g] : null, c = S.markers[m.name].rows[g];
+        out.amendments.push({version: v, effective_date: S.effective_date, approving_role: S.approving_role, marker: m.name, group: g,
+          reason: S.row_reasons[rowKey(m.name, g)], from: b ? {low: b.low, high: b.high, unit: b.unit} : null, to: {low: c.low, high: c.high, unit: c.unit}});
+      }
+      const oc = otherChanges();
+      if (oc.length) out.amendments.push({version: v, effective_date: S.effective_date, approving_role: S.approving_role, marker: null, group: null, reason: S.version_reason, changes: oc});
+    }
+    const a = h("a", {href: URL.createObjectURL(new Blob([JSON.stringify(out, null, 1)], {type: "application/json"})), download: `medlabiq-benchmark-v${v}-${S.effective_date}.json`});
+    document.body.append(a); a.click(); a.remove();
+    openVersion(out);
+    go("r");
+    $("#reviewCard").prepend(h("p", {class: "ok", text: `Saved version ${v}. Open that file here to amend it later.`}));
+  }
+  function stripHistory(b) { const c = clone(b); delete c.previous_versions; delete c.amendments; return c; }
+
+  function openVersion(obj) {
+    if (!obj || obj.schema !== SCHEMA || !obj.profile || !obj.markers) throw new Error("That file isn't a MedLabIQ benchmark this page can open.");
+    BASE = clone(obj);
+    S = blankState();
+    Object.assign(S, {version: obj.version || 0, approving_role: obj.approving_role || "", profile: clone(obj.profile),
+      amendments: clone(obj.amendments || []), previous_versions: clone(obj.previous_versions || [])});
+    for (const [m, mk] of Object.entries(obj.markers)) {
+      if (!BY[m]) continue;
+      S.markers[m] = {ordered: mk.ordered, rows: {}};
+      for (const [g, r] of Object.entries(mk.rows)) S.markers[m].rows[g] = {low: r.low, high: r.high, unit: r.unit, custom: !!r.custom};
+      for (const [g, r] of Object.entries(BASE.markers[m].rows)) BASE.markers[m].rows[g] = {low: r.low, high: r.high, unit: r.unit};
+    }
+    change(); go("c");
+  }
+
+  // ---- shell
+  let current = "a";
+  function go(step) {
+    current = step;
+    for (const b of document.querySelectorAll("nav.steps button")) { if (b.dataset.step === step) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current"); }
+    for (const s of ["a", "b", "c", "r"]) $("#step-" + s).hidden = s !== step;
+    if (step === "a") renderA(); if (step === "b") renderB(); if (step === "c") renderC(); if (step === "r") renderR();
+    window.scrollTo({top: 0});
+  }
+  function change(rerender = true) {
+    saveDraft();
+    const P = S.profile, n = orderedList().length;
+    $("#navA").textContent = [P.practice_type, P.primary_lab].filter(Boolean).join(", ") || "Not started";
+    $("#navB").textContent = n ? `${n} markers` : "None checked";
+    $("#navC").textContent = n ? `${orderedList().filter(m => customCount(m.name)).length} changed` : "";
+    const pr = problems().length; $("#navR").textContent = pr ? `${pr} to fix` : "Ready";
+    $("#modePill").textContent = BASE ? `Amending version ${BASE.version}` : "New benchmark";
+    $("#modePill").classList.toggle("amend", !!BASE);
+    if (rerender && current === "b") $("#bCount").textContent = `${n} of ${DATA.markers.length} checked`;
+    if (rerender && current === "r") renderR();
+  }
+
+  document.addEventListener("click", e => { const t = e.target.closest("[data-go],[data-step]"); if (t) go(t.dataset.go || t.dataset.step); });
+  $("#bFilter").addEventListener("input", renderB);
+  $("#cFilter").addEventListener("input", renderC);
+  $("#cOnlyCustom").addEventListener("change", renderC);
+  $("#saveBtn").addEventListener("click", save);
+  $("#loadFile").addEventListener("change", async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try { openVersion(JSON.parse(await f.text())); $("#loadError").hidden = true; }
+    catch (err) { $("#loadError").hidden = false; $("#loadError").textContent = (err && /benchmark/.test(err.message || "")) ? err.message : "That file couldn't be read as a MedLabIQ benchmark. Choose a file this page saved."; }
+    e.target.value = "";
+  });
+
+  fetch("data.json").then(r => { if (!r.ok) throw new Error(); return r.json(); }).then(d => {
+    DATA = d; for (const m of d.markers) BY[m.name] = m;
+    loadDraft();
+    for (const k of Object.keys(S.markers)) if (!BY[k]) delete S.markers[k];
+    change(); go("a");
+  }).catch(() => {
+    $("#loadError").hidden = false;
+    $("#loadError").textContent = "The marker list didn't load. Open this page from its web address rather than as a file on your computer.";
+  });
+})();
+</script>
+</body>
+</html>

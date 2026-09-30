@@ -134,6 +134,14 @@ details.marker > summary .tag.warn { background: var(--warn-soft); color: var(--
 .rows input[type="number"] { width: 110px; }
 .rows .sep { color: var(--muted); padding: 8px 6px 0 0; width: 1em; }
 .rows tr.changed td.grp::after { content: "amended"; display: block; font-size: 11.5px; color: var(--accent); font-weight: 400; }
+.rows tr.more td { padding-top: 0; border-bottom: 1px solid var(--soft); }
+.rows tr:has(+ tr.more) td { border-bottom: 0; }
+.xset > summary { cursor: pointer; font-size: 13px; color: var(--accent); padding: 2px 0 8px; }
+.xgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 14px; padding: 4px 0 10px; }
+.xgrid .f { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.xgrid .f > span { font-size: 12.5px; color: var(--muted); }
+.xgrid .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.xgrid input[type="number"] { width: 100%; }
 .linkbtn { background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; font-size: 12.5px; text-decoration: underline; }
 
 .review dl { display: grid; grid-template-columns: 220px 1fr; gap: 8px 16px; margin: 0; }
@@ -160,6 +168,9 @@ details.marker > summary .tag.warn { background: var(--warn-soft); color: var(--
   .rows td { border: 0; padding: 0; }
   .rows td.grp, .rows td.unit, .rows td.src, .rows td.why { grid-column: 1 / -1; }
   .rows input[type="number"] { width: 100%; }
+  .rows tr.more { display: block; padding-top: 0; }
+  .rows tr.more td { display: block; }
+  .xgrid { grid-template-columns: minmax(0, 1fr); }
   .review dl { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
@@ -255,6 +266,16 @@ details.marker > summary .tag.warn { background: var(--warn-soft); color: var(--
     "imaging/test": "Imaging and tests"};
   const ROLE_LABEL = r => r.replace(/_/g, " ").replace(/^./, c => c.toUpperCase());
   const SCHEMA = "medlabiq-benchmark/2";
+  const SEV = ["info", "low", "moderate", "high"];
+  const ACTIONS = ["note", "recheck", "refer", "hold therapy"];
+  const TIME = ["days", "weeks", "months"];
+  const TREND = ["absolute", "percent"];
+  const MAIN = ["low", "high", "unit"];
+  const EXTRA = {opt_low: null, opt_high: null, sev_opt: "", sev_ref: "", crit_low: null, crit_high: null,
+    action: "", recheck_n: null, recheck_unit: "months", trend_n: null, trend_kind: "percent"};
+  const FIELDS = MAIN.concat(Object.keys(EXTRA));
+  const pick = r => { const o = {}; for (const k of FIELDS) o[k] = r && r[k] !== undefined ? r[k] : (k in EXTRA ? EXTRA[k] : null); return o; };
+  const extrasSet = r => ["opt_low", "opt_high", "sev_opt", "sev_ref", "crit_low", "crit_high", "action", "recheck_n", "trend_n"].filter(k => r[k] !== null && r[k] !== "" && r[k] !== undefined).length;
   const DRAFT_KEY = "medlabiq-benchmark-draft-2";
 
   let DATA = null, BY = {};
@@ -313,19 +334,24 @@ details.marker > summary .tag.warn { background: var(--warn-soft); color: var(--
   }
   function fromDefault(m, gid) {
     const d = defaultFor(m, gid), units = unitsFor(m);
-    return {low: d ? d.low : null, high: d ? d.high : null, unit: d && units.includes(d.unit) ? d.unit : units[0], custom: false};
+    return Object.assign({}, EXTRA, {low: d ? d.low : null, high: d ? d.high : null, unit: d && units.includes(d.unit) ? d.unit : units[0], custom: false});
   }
   function ensureRows(m) {
     const mk = S.markers[m] || (S.markers[m] = {ordered: false, rows: {}});
-    for (const g of S.profile.groups) if (!mk.rows[g]) mk.rows[g] = fromDefault(m, g);
+    for (const g of S.profile.groups) {
+      if (!mk.rows[g]) { mk.rows[g] = fromDefault(m, g); continue; }
+      // fill fields an older draft doesn't have, in place, so open rows keep their reference
+      for (const k of FIELDS) if (mk.rows[g][k] === undefined) mk.rows[g][k] = k in EXTRA ? EXTRA[k] : null;
+    }
     return mk;
   }
   function refreshDefaults() {
     // a row nobody has touched follows the defaults when the primary lab changes
-    for (const [m, mk] of Object.entries(S.markers)) for (const [g, r] of Object.entries(mk.rows)) if (!r.custom) mk.rows[g] = fromDefault(m, g);
+    for (const [m, mk] of Object.entries(S.markers)) for (const [g, r] of Object.entries(mk.rows)) if (!r.custom) { const d = fromDefault(m, g); for (const k of MAIN) r[k] = d[k]; }
   }
   const rowKey = (m, g) => m + "\u0001" + g;
-  const same = (a, b) => a && b && a.low === b.low && a.high === b.high && a.unit === b.unit;
+  const same = (a, b) => { if (!a || !b) return false; const x = pick(a), y = pick(b); return FIELDS.every(k => x[k] === y[k]); };
+  const openMore = new Set();
   function changed(m, g) {
     if (!BASE) return false;
     const b = BASE.markers[m] && BASE.markers[m].rows && BASE.markers[m].rows[g];
@@ -412,12 +438,12 @@ details.marker > summary .tag.warn { background: var(--warn-soft); color: var(--
   function markerBody(m, card) {
     const tbody = h("tbody");
     const table = h("table", {class: "rows"}, [h("thead", {}, h("tr", {}, [h("th", {text: "Group"}), h("th", {text: "Low"}), h("th"), h("th", {text: "High"}), h("th", {text: "Unit"}), h("th", {text: "Default"})])), tbody]);
-    for (const g of S.profile.groups) tbody.append(rowEl(m, g, card));
+    for (const g of S.profile.groups) tbody.append(...rowEl(m, g, card));
     return h("div", {class: "mbody"}, [table, labOnFile(m)]);
   }
   function rowEl(m, gid, card) {
     const mk = ensureRows(m.name), r = mk.rows[gid], g = group(gid);
-    const tr = h("tr");
+    const tr = h("tr"), more = h("tr", {class: "more"});
     const prev = BASE && BASE.markers[m.name] && BASE.markers[m.name].rows && BASE.markers[m.name].rows[gid];
     const draw = () => {
       tr.textContent = ""; tr.classList.toggle("changed", changed(m.name, gid));
@@ -439,19 +465,69 @@ details.marker > summary .tag.warn { background: var(--warn-soft); color: var(--
         return i;
       };
       const d = defaultFor(m.name, gid);
-      const was = prev && !same(prev, r) ? h("div", {class: "was", text: `was ${prev.low == null ? "open" : fmt(prev.low)} to ${prev.high == null ? "open" : fmt(prev.high)} ${prev.unit}`}) : null;
+      const mainChanged = prev && MAIN.some(k => (prev[k] ?? null) !== (r[k] ?? null));
+      const was = prev && !same(prev, r) ? h("div", {class: "was", text: mainChanged ? `was ${prev.low == null ? "open" : fmt(prev.low)} to ${prev.high == null ? "open" : fmt(prev.high)} ${prev.unit}` : "settings changed"}) : null;
       const reason = changed(m.name, gid) ? select(REASONS, S.row_reasons[rowKey(m.name, gid)] || "", {style: "margin-top:6px", onchange: e => { S.row_reasons[rowKey(m.name, gid)] = e.target.value; change(false); }, "aria-label": `Reason for change, ${m.name}, ${g.label}`}, "Reason for change") : null;
       const src = d ? [`${d.lab} ${d.low == null ? "open" : fmt(d.low)} to ${d.high == null ? "open" : fmt(d.high)} ${d.unit}`, h("br"), h("span", {text: d.how + (d.fallback ? `. No ${S.profile.primary_lab} default, so ${d.lab}'s is used` : "")})] : ["No lab publishes a default. Both sides start open."];
-      const reset = r.custom ? h("button", {class: "linkbtn", onclick: () => { Object.assign(r, fromDefault(m.name, gid)); afterEdit(); }, text: "Reset to default"}) : null;
+      const dflt = fromDefault(m.name, gid);
+      const offDefault = MAIN.some(k => r[k] !== dflt[k]);
+      const reset = offDefault ? h("button", {class: "linkbtn", onclick: () => { for (const k of MAIN) r[k] = dflt[k]; r.custom = extrasSet(r) > 0; afterEdit(); }, text: "Reset low and high to default"}) : null;
       tr.append(
         h("td", {class: "grp"}, [g.label, ["men", "women", "postmeno"].includes(gid) ? null : h("div", {class: "was", text: `Uses ${BASIS[g.basis]} defaults`}), was, reason]),
         h("td", {class: "num"}, inp("low")), h("td", {class: "sep", text: "to"}), h("td", {class: "num"}, inp("high")),
         h("td", {class: "unit"}, select(unitsFor(m.name), r.unit, {onchange: e => { r.unit = e.target.value; r.custom = true; afterEdit(); }, "aria-label": `Unit, ${m.name}, ${g.label}`}, null)),
         h("td", {class: "src"}, [...src, reset ? h("br") : null, reset, msg, conv(m, r)]));
     };
-    const afterEdit = () => { change(false); draw(); summarize(m, card); };
-    draw();
-    return tr;
+    const drawMore = () => {
+      more.textContent = "";
+      const key = rowKey(m.name, gid), n = extrasSet(r);
+      const box = h("details", {class: "xset"}, [h("summary", {text: `More settings${n ? ` (${n} set)` : ""}`})]);
+      if (openMore.has(key)) box.open = true;
+      box.addEventListener("toggle", () => { if (box.open) openMore.add(key); else openMore.delete(key); });
+      const msg = h("div", {class: "msg", role: "status"});
+      const numIn = (k, label, min, max) => {
+        const i = h("input", {type: "number", step: "any", inputmode: "decimal", value: fmt(r[k]), "aria-label": `${label}, ${m.name}, ${g.label}`});
+        if (min != null) i.min = min; if (max != null) i.max = max;
+        return i;
+      };
+      const pair = (lo, hi, label) => {
+        const a = numIn(lo, label + " low", null, r[hi]), b = numIn(hi, label + " high", r[lo], null);
+        const set = (k, other, input, isLow) => input.addEventListener("change", () => {
+          const v = num(input.value), o = r[other];
+          if (v != null && o != null && (isLow ? v > o : v < o)) {
+            input.value = fmt(r[k]); msg.textContent = `${label}: ${isLow ? "the low can't sit above its high" : "the high can't sit below its low"} (${fmt(o)}).`; return;
+          }
+          r[k] = v; r.custom = true; afterEdit();
+        });
+        set(lo, hi, a, true); set(hi, lo, b, false);
+        return h("div", {class: "f"}, [h("span", {text: label + " low and high"}), h("div", {class: "pair"}, [a, b])]);
+      };
+      const sel = (k, opts, label, blank) => h("div", {class: "f"}, [h("span", {text: label}),
+        select(opts, r[k], {onchange: e => { r[k] = e.target.value; r.custom = true; afterEdit(); }, "aria-label": `${label}, ${m.name}, ${g.label}`}, blank)]);
+      const numSel = (k, uk, opts, label) => {
+        const i = numIn(k, label, 0, null);
+        i.addEventListener("change", () => { r[k] = num(i.value); r.custom = true; afterEdit(); });
+        return h("div", {class: "f"}, [h("span", {text: label}), h("div", {class: "pair"}, [i,
+          select(opts, r[uk], {onchange: e => { r[uk] = e.target.value; r.custom = true; afterEdit(); }, "aria-label": `${label} unit, ${m.name}, ${g.label}`}, null)])]);
+      };
+      const notes = [];
+      if ((r.opt_low != null && r.low != null && r.opt_low < r.low) || (r.opt_high != null && r.high != null && r.opt_high > r.high)) notes.push(h("div", {class: "msg warn", text: "The optimal range sits outside the low and high. Check it's intended."}));
+      if ((r.crit_low != null && r.low != null && r.crit_low > r.low) || (r.crit_high != null && r.high != null && r.crit_high < r.high)) notes.push(h("div", {class: "msg", text: "A critical value sits inside the low and high. Move it outside before saving."}));
+      if (r.crit_low != null || r.crit_high != null) notes.push(h("div", {class: "was", text: "Critical values go to the safety approver."}));
+      box.append(h("div", {class: "xgrid"}, [
+        pair("opt_low", "opt_high", "Optimal"),
+        sel("sev_opt", SEV, "Severity outside optimal", "Not set"),
+        sel("sev_ref", SEV, "Severity outside the low and high", "Not set"),
+        pair("crit_low", "crit_high", "Critical"),
+        sel("action", ACTIONS, "Action on flag", "Not set"),
+        numSel("recheck_n", "recheck_unit", TIME, "Recheck every"),
+        numSel("trend_n", "trend_kind", TREND, "Trend alert per draw")
+      ]), msg, ...notes);
+      more.append(h("td", {colspan: "6"}, box));
+    };
+    const afterEdit = () => { change(false); draw(); drawMore(); summarize(m, card); };
+    draw(); drawMore();
+    return [tr, more];
   }
   function conv(m, r) {
     const c = (BY[m.name].conversions || []).find(x => x.from === r.unit);
@@ -470,7 +546,10 @@ details.marker > summary .tag.warn { background: var(--warn-soft); color: var(--
     if (!orderedList().length) out.push(["b", "Check at least one marker you order."]);
     for (const m of orderedList()) for (const g of P.groups) {
       const r = ensureRows(m.name).rows[g];
-      if (r.low != null && r.high != null && r.low > r.high) out.push(["c", `${m.name}, ${group(g).label}: the low sits above the high.`]);
+      const who = `${m.name}, ${group(g).label}`;
+      for (const [a, b, what] of [["low", "high", "the low sits above the high"], ["opt_low", "opt_high", "the optimal low sits above the optimal high"], ["crit_low", "crit_high", "the critical low sits above the critical high"]])
+        if (r[a] != null && r[b] != null && r[a] > r[b]) out.push(["c", `${who}: ${what}.`]);
+      if ((r.crit_low != null && r.low != null && r.crit_low > r.low) || (r.crit_high != null && r.high != null && r.crit_high < r.high)) out.push(["c", `${who}: a critical value sits inside the low and high.`]);
       if (changed(m.name, g) && !S.row_reasons[rowKey(m.name, g)]) out.push(["c", `${m.name}, ${group(g).label}: choose a reason for the change.`]);
     }
     if (BASE && otherChanges().length && !S.version_reason) out.push(["r", "Choose a reason for the profile and marker changes."]);
@@ -522,8 +601,8 @@ details.marker > summary .tag.warn { background: var(--warn-soft); color: var(--
       out.markers[m.name] = {ordered: true, rows: {}};
       for (const g of S.profile.groups) {
         const r = S.markers[m.name].rows[g], d = defaultFor(m.name, g);
-        out.markers[m.name].rows[g] = {low: r.low, high: r.high, unit: r.unit, custom: r.custom,
-          default: d ? {lab: d.lab, low: d.low, high: d.high, unit: d.unit, how: d.how, source: d.source} : null};
+        out.markers[m.name].rows[g] = Object.assign(pick(r), {custom: r.custom,
+          default: d ? {lab: d.lab, low: d.low, high: d.high, unit: d.unit, how: d.how, source: d.source} : null});
       }
     }
     if (BASE) {
@@ -531,7 +610,7 @@ details.marker > summary .tag.warn { background: var(--warn-soft); color: var(--
       for (const m of orderedList()) for (const g of S.profile.groups) if (changed(m.name, g)) {
         const b = BASE.markers[m.name] && BASE.markers[m.name].rows ? BASE.markers[m.name].rows[g] : null, c = S.markers[m.name].rows[g];
         out.amendments.push({version: v, effective_date: S.effective_date, approving_role: S.approving_role, marker: m.name, group: g,
-          reason: S.row_reasons[rowKey(m.name, g)], from: b ? {low: b.low, high: b.high, unit: b.unit} : null, to: {low: c.low, high: c.high, unit: c.unit}});
+          reason: S.row_reasons[rowKey(m.name, g)], from: b ? pick(b) : null, to: pick(c)});
       }
       const oc = otherChanges();
       if (oc.length) out.amendments.push({version: v, effective_date: S.effective_date, approving_role: S.approving_role, marker: null, group: null, reason: S.version_reason, changes: oc});
@@ -553,8 +632,8 @@ details.marker > summary .tag.warn { background: var(--warn-soft); color: var(--
     for (const [m, mk] of Object.entries(obj.markers)) {
       if (!BY[m]) continue;
       S.markers[m] = {ordered: mk.ordered, rows: {}};
-      for (const [g, r] of Object.entries(mk.rows)) S.markers[m].rows[g] = {low: r.low, high: r.high, unit: r.unit, custom: !!r.custom};
-      for (const [g, r] of Object.entries(BASE.markers[m].rows)) BASE.markers[m].rows[g] = {low: r.low, high: r.high, unit: r.unit};
+      for (const [g, r] of Object.entries(mk.rows)) S.markers[m].rows[g] = Object.assign(pick(r), {custom: !!r.custom});
+      for (const [g, r] of Object.entries(BASE.markers[m].rows)) BASE.markers[m].rows[g] = pick(r);
     }
     change(); go("c");
   }

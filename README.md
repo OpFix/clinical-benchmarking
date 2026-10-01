@@ -20,6 +20,7 @@ Everything in it is public already: marker names and the ranges and codes each l
 
 - A row opens on its default: the practice's primary lab's range for that group, or the other lab's where the primary lab has none.
 - A high can't be set below its low, and a low can't be set above its high. Either side can be left blank to leave it open.
+- Each row also has optional settings: optimal range, severity outside optimal and outside the range, critical values, action on flag, recheck interval and trend alert. The optimal and critical pairs can't cross either, and a critical value inside the range blocks saving.
 - Every input is a number, a dropdown, a checkbox or a date. There's no free text.
 - Saving downloads a file. Nothing a practice enters is sent anywhere.
 
